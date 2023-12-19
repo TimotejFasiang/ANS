@@ -1,0 +1,202 @@
+- notebook: linear-classification
+  testfile: test_linear_classification
+  deadline: 2023-12-19
+  tests:
+    - name: TestBatchLoader
+      points: 3
+    - name: TestPreprocess
+      points: 1
+      params:
+        preprocess_fn: preprocess
+    - name: TestInit
+      points: 1
+      params:
+        init_params_fn: init_params
+    - name: TestCalcLinearScores
+      points: 1
+      params:
+        calc_linear_scores_fn: calc_linear_scores
+    - name: TestSoftmaxCrossEntropy
+      points: 2
+      params:
+        softmax_cross_entropy_fn: softmax_cross_entropy
+    - name: TestAccuracy
+      points: 1
+      params:
+        accuracy_fn: accuracy
+    - name: TestSoftmaxCrossEntropyGradients
+      points: 5
+      params:
+        softmax_cross_entropy_gradients_fn: softmax_cross_entropy_gradients
+    - name: TestUpdateParamInplace
+      points: 1
+      params:
+        update_param_inplace_fn: update_param_inplace
+    - name: TestTrainStepSoftmax
+      points: 2
+      params:
+        train_step_softmax_fn: train_step_softmax
+    - name: TestValStep
+      points: 2
+      params:
+        val_step_fn: val_step
+        loss_fn: softmax_cross_entropy
+    - name: TestSoftmaxValAccuracy
+      required: false
+      points: 3
+    - name: TestHingeLoss
+      required: false
+      points: 5
+      params:
+        hinge_loss_fn: hinge_loss
+    - name: TestHingeLossGradients
+      required: false
+      points: 8
+      params:
+        hinge_loss_gradients_fn: hinge_loss_gradients
+    - name: TestTrainStepSVM
+      required: false
+      points: 2
+      params:
+        train_step_svm_fn: train_step_svm
+    - name: TestSVMValAccuracy
+      required: false
+      points: 3
+
+- notebook: backpropagation
+  testfile: test_backpropagation
+  deadline: 2023-12-19
+  tests:
+    - name: TestAdd
+      points: 2
+    - name: TestSub
+      points: 2
+    - name: TestMul
+      points: 2
+    - name: TestPow
+      points: 2
+    - name: TestTopologicalSort
+      points: 8
+    - name: TestBackprop
+      points: 8
+    - name: TestToGraphviz
+      required: false
+      points: 8
+      params:
+        w: w
+        z: z
+        q: q
+  
+- notebook: neural-library
+  testfile: test_neural_library
+  deadline: 2023-12-19
+  tests:
+    - name: TestLinearFunction
+      points: 5
+    - name: TestSigmoidFunction
+      points: 5
+    - name: TestSoftmaxCrossEntropyFunction
+      points: 8
+    - name: TestLinearModule
+      points: 3
+    - name: TestSigmoidModule
+      points: 1
+    - name: TestSoftmaxCrossEntropyModule
+      points: 1
+
+- notebook: multilayer-perceptron
+  testfile: test_multilayer_perceptron
+  deadline: 2024-01-02
+  tests:
+    - name: TestSGD
+      points: 5
+    - name: TestPreprocess
+      points: 1
+      params:
+        preprocess_fn: preprocess
+    - name: TestAccuracy
+      points: 1
+      params:
+        accuracy_fn: accuracy
+    - name: TestSteps
+      points: 3
+      params:
+        train_step_fn: train_step
+        val_step_fn: val_step
+    - name: TestBasicMLPAccuracy
+      points: 8
+    - name: TestReLU
+      required: false
+      points: 3
+    - name: TestBatchNorm1d
+      required: false
+      points: 8
+    - name: TestDropout
+      required: false
+      points: 5
+    - name: TestAdam
+      required: false
+      points: 5
+    - name: TestAdvancedMLPAccuracy
+      required: false
+      points: 8
+
+- notebook: convolutional-network
+  testfile: test_convolutional_network
+  deadline: 2023-01-10
+  tests:
+    - name: TestConv2dFunction
+      points: 8
+    - name: TestConv2dFunctionOptional
+      required: false
+      points: 5
+    - name: TestConv2dModule
+      points: 3
+    - name: TestReLU
+      points: 3
+    - name: TestMaxPool2dFunction
+      points: 8
+    - name: TestMaxPool2dModule
+      points: 1
+    - name: TestReshape
+      points: 3
+    - name: TestFlattenModule
+      points: 1
+    - name: TestVGG7
+      points: 5
+      params:
+        model_cls: VGG7
+    - name: TestAccuracy
+      points: 1
+      params:
+        accuracy_fn: accuracy
+    - name: TestSteps
+      required: false
+      points: 3
+      params:
+        train_step_fn: train_step
+        val_step_fn: val_step
+    - name: TestVGG7ValAccuracy
+      points: 5
+    - name: TestAugmentation
+      required: false
+      points: 2
+      params:
+        train_dataset: train_dataset_aug
+        val_dataset: val_dataset
+    - name: TestBatchNorm2d
+      required: false
+      points: 5
+    - name: TestVGG7BN
+      required: false
+      points: 3
+      params:
+        model_cls: VGG7BN
+    - name: TestResnet9
+      required: false
+      points: 5
+      params:
+        model_cls: ResNet9
+    - name: TestResnet9ValAccuracy
+      required: false
+      points: 5
