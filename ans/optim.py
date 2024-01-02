@@ -33,10 +33,9 @@ class SGD(Optimizer):
 
         ########################################
         # TODO: init _velocities to zeros
-
-        raise NotImplementedError
-        self._velocities: ...
-
+        
+        self._velocities: Dict[Variable, torch.Tensor] = {param: torch.zeros_like(param.data) for param in self.parameters}
+        
         # ENDTODO
         ########################################
 
@@ -44,7 +43,11 @@ class SGD(Optimizer):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        for param, velocity in self._velocities.items():
+            if param.grad is not None:
+                grad = param.grad + self.weight_decay * param.data
+                velocity.data = self.momentum * velocity.data - self.learning_rate * grad
+                param.data = param.data + velocity.data
 
         # ENDTODO
         ########################################
@@ -70,11 +73,10 @@ class Adam(Optimizer):
 
         ########################################
         # TODO: init _num_steps to zero, _m to zeros, _v to zeros
-
-        raise NotImplementedError
-        self._num_steps = ...
-        self._m: dict[Variable, torch.Tensor] = ...
-        self._v: dict[Variable, torch.Tensor] = ...
+        
+        self._num_steps = 0
+        self._m = {param: torch.zeros_like(param.data) for param in self.parameters}
+        self._v = {param: torch.zeros_like(param.data) for param in self.parameters}
 
         # ENDTODO
         ########################################
@@ -83,7 +85,22 @@ class Adam(Optimizer):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        self._num_steps += 1
+
+        for param in self.parameters:
+            grad = param.grad.data
+
+            if self.weight_decay != 0:
+                grad = grad.add(self.weight_decay, param.data)
+
+            self._m[param] = self.beta1 * self._m[param] + (1 - self.beta1) * grad
+            self._v[param] = self.beta2 * self._v[param] + (1 - self.beta2) * (grad ** 2)
+
+            m_hat = self._m[param] / (1 - self.beta1 ** self._num_steps)
+            v_hat = self._v[param] / (1 - self.beta2 ** self._num_steps)
+
+            update = -self.learning_rate * m_hat / (v_hat.sqrt() + self.eps)
+            param.data.add_(update)
 
         # ENDTODO
         ########################################

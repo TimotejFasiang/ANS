@@ -36,7 +36,7 @@ class Function:
     def __repr__(self):
         return str(self)
 
-
+    
 class Linear(Function):
 
     @staticmethod
@@ -147,14 +147,14 @@ class SoftmaxCrossEntropy(Function):
 
         ########################################
         # TODO: implement
-
-        scores = scores.float()  # Causes small errors in testing when this is not here???
+        
+        scores = scores.float() # Causes small errors in testing when this is not here???
 
         # Numerical stability
         max_scores, _ = torch.max(scores, dim=1, keepdim=True)
         scores -= max_scores
         exp_scores = torch.exp(scores)
-
+        
         softmax_probs = exp_scores / torch.sum(exp_scores, dim=1, keepdim=True)
         target_probs = softmax_probs[torch.arange(scores.size(0)), targets]
 
@@ -224,7 +224,8 @@ class ReLU(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        output = torch.max(input, torch.zeros_like(input))
+        cache = (input,)
 
         # ENDTODO
         ########################################
@@ -244,7 +245,8 @@ class ReLU(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        input, = cache
+        dinput = (input > 0).float() * doutput
 
         # ENDTODO
         ########################################
@@ -322,8 +324,20 @@ class Dropout(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
-
+        if training:
+            with torch.no_grad():
+                # During training, apply dropout
+                mask = (torch.rand(input.size()) > p).float() / (1.0 - p)
+                # Ensure that the mask is non-zero to prevent division by zero
+                mask = torch.clamp(mask, min=1e-12)
+                output = input * mask
+                cache = mask
+                assert not torch.isnan(output).any(), "NaN values in the output during training"
+        else:
+            # During evaluation, keep the input unchanged
+            output = input
+            cache = None
+        
         # ENDTODO
         ########################################
 
@@ -342,7 +356,7 @@ class Dropout(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        dinput = doutput * cache if cache is not None else doutput
 
         # ENDTODO
         ########################################
@@ -381,8 +395,37 @@ class BatchNorm1d(Function):
 
         ########################################
         # TODO: implement
+        
+        import torch
+        from typing import Optional, Tuple
+        
+        # Ensure double precision for running mean and variance
+        if running_mean is not None:
+            running_mean = running_mean.to(dtype=torch.float64)
+        if running_var is not None:
+            running_var = running_var.to(dtype=torch.float64)
 
-        raise NotImplementedError
+        # Calculate mean and variance
+        mean = input.mean(dim=0)
+        var = input.var(dim=0, unbiased=False)
+
+        # Update running mean and variance during training
+        if training:
+            if running_mean is not None and running_var is not None:
+                running_mean.mul_(momentum).add_((1 - momentum) * mean)
+                running_var.mul_(momentum).add_((1 - momentum) * var)
+
+        # Normalize input
+        x_hat = (input - mean) / torch.sqrt(var + eps)
+
+        # Scale and shift
+        if gamma is not None and beta is not None:
+            output = gamma * x_hat + beta
+        else:
+            output = x_hat
+
+        # Cache intermediate results for backward pass
+        cache = (x_hat, gamma, beta, input, mean, var, eps)
 
         # ENDTODO
         ########################################
@@ -402,7 +445,17 @@ class BatchNorm1d(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        x_hat, gamma, beta, input, mean, var, eps = cache
+        N = input.shape[0]
+
+        dgamma = (doutput * x_hat).sum(dim=0)
+        dbeta = doutput.sum(dim=0)
+
+        dx_hat = doutput * gamma
+        dvar = -0.5 * (dx_hat * (input - mean)).sum(dim=0) * (var + eps)**(-1.5)
+        dmean = -dx_hat.sum(dim=0) / torch.sqrt(var + eps) - 2 * dvar * (input - mean).mean(dim=0) / N
+        dinput = dx_hat / torch.sqrt(var + eps) + 2 * dvar * (input - mean) / N + dmean / N
+
 
         # ENDTODO
         ########################################

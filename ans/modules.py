@@ -93,9 +93,8 @@ class Linear(Module):
 
         ########################################
         # TODO: initialize weight and bias
-
+        
         import math
-
         bound = 1 / math.sqrt(num_in)
         self.weight = Variable(bound * (2 * torch.rand(num_in, num_out) - 1))
         self.bias = Variable(torch.zeros(num_out))
@@ -106,10 +105,10 @@ class Linear(Module):
     def forward(self, x: Variable) -> Variable:
         ########################################
         # TODO: implement
-
+    
         output = ans.functional.Linear.apply(x, self.weight, self.bias)
         return output
-
+    
         # ENDTODO
         ########################################
 
@@ -155,7 +154,8 @@ class ReLU(Module):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        from ans.functional import ReLU
+        return ReLU.apply(x)
 
         # ENDTODO
         ########################################
@@ -167,14 +167,26 @@ class Dropout(Module):
         super().__init__()
         self.p = p
 
-    def forward(self, x: Variable) -> Variable:
+    def forward(self, x: Variable, training: bool = True) -> Variable:
         ########################################
         # TODO: implement
-
-        raise NotImplementedError
+        
+        from ans.functional import Dropout
+        
+        if training:
+            # During training, apply dropout
+            mask = (torch.rand_like(x.data) > self.p).float() / (1 - self.p)
+            output = x * mask
+            output = Dropout.apply(output)
+        else:
+            # During evaluation, keep the input unchanged
+            output = x
 
         # ENDTODO
         ########################################
+        
+        return output
+
 
 
 class Tanh(Module):
@@ -227,7 +239,15 @@ class BatchNorm1d(Module):
         # running_mean to zeros
         # running_var to ones
 
-        raise NotImplementedError
+        if self.affine:
+            self.gamma = torch.ones(num_features, requires_grad=True)
+            self.beta = torch.zeros(num_features, requires_grad=True)
+        else:
+            self.gamma = None
+            self.beta = None
+
+        self.running_mean = torch.zeros(num_features)
+        self.running_var = torch.ones(num_features)
 
         # ENDTODO
         ########################################
@@ -235,8 +255,10 @@ class BatchNorm1d(Module):
     def forward(self, x: Variable) -> Variable:
         ########################################
         # TODO: implement
-
-        raise NotImplementedError
+        
+        from ans.functional import BatchNorm1d
+        
+        return BatchNorm1d.apply(x, self.gamma, self.beta, self.running_mean, self.running_var, self.momentum, self.eps, self.training)
 
         # ENDTODO
         ########################################
