@@ -270,7 +270,7 @@ class BatchNorm2d(BatchNorm1d):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        return ans.functional.BatchNorm2d.apply(x, self.gamma, self.beta, self.running_mean, self.running_var, self.momentum, self.eps, self.training)
 
         # ENDTODO
         ########################################
@@ -301,9 +301,12 @@ class Conv2d(Module):
 
         ########################################
         # TODO: initialize weight and bias
-        # if bias is True, then bias should be zeros, otherwise set to None
 
-        raise NotImplementedError
+        fan_in = in_channels * kernel_size * kernel_size
+        bound = 1 / (fan_in ** 0.5)
+        self.weight = Variable(torch.rand(out_channels, in_channels, kernel_size, kernel_size) * 2 * bound - bound)
+
+        self.bias = Variable(torch.zeros(out_channels)) if bias else None
 
         # ENDTODO
         ########################################
@@ -311,8 +314,8 @@ class Conv2d(Module):
     def forward(self, x: Variable) -> Variable:
         ########################################
         # TODO: implement
-
-        raise NotImplementedError
+        from ans import functional
+        return functional.Conv2d.apply(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
 
         # ENDTODO
         ########################################
@@ -329,7 +332,7 @@ class MaxPool2d(Module):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        return ans.functional.MaxPool2d.apply(x, self.window_size)
 
         # ENDTODO
         ########################################
@@ -341,7 +344,7 @@ class Flatten(Module):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        return x.reshape(x.shape[0], -1)
 
         # ENDTODO
         ########################################
