@@ -38,20 +38,14 @@ class Variable:
     def __add__(self, other: 'Variable') -> 'Variable':
         ########################################
         # TODO: implement
-
-        import numpy as np
-
         def grad_fn(dout: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
             return dout.clone(), dout.clone()
-
         result = Variable(
             self.data + other.data,
             parents=(self, other),
             grad_fn=grad_fn
         )
-
         return result
-
         # ENDTODO
         ########################################
     
@@ -67,18 +61,14 @@ class Variable:
     def __sub__(self, other: 'Variable') -> 'Variable':
         ########################################
         # TODO: implement
-
         def grad_fn(dout: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
             return dout.clone(), -dout.clone()
-
         result = Variable(
             self.data - other.data,
             parents=(self, other),
             grad_fn=grad_fn
         )
-
         return result
-
         # ENDTODO
         ########################################
     
@@ -94,18 +84,14 @@ class Variable:
     def __mul__(self, other: 'Variable') -> 'Variable':
         ########################################
         # TODO: implement
-
         def grad_fn(dout: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
             return dout * other.data, dout * self.data
-
         result = Variable(
             self.data * other.data,
             parents=(self, other),
             grad_fn=grad_fn
         )
-
         return result
-
         # ENDTODO
         ########################################
     
@@ -121,19 +107,15 @@ class Variable:
     def __pow__(self, power, modulo=None):
         ########################################
         # TODO: implement
-
         def grad_fn(dout: torch.Tensor) -> tuple[torch.Tensor]:
             grad = dout * power * self.data**(power - 1)
             return grad,
-
         result = Variable(
             self.data**power,
             parents=(self,),
             grad_fn=grad_fn
         )
-
         return result
-
         # ENDTODO
         ########################################
     
@@ -191,7 +173,6 @@ class Variable:
 
         ########################################
         # TODO: implement
-
         def visit(node: 'Variable', visited: set):
             if node not in visited:
                 visited.add(node)
@@ -200,7 +181,6 @@ class Variable:
                 predecessors.append(node)
 
         visit(self, set())
-
         # ENDTODO
         ########################################
 
@@ -218,21 +198,17 @@ class Variable:
 
         ########################################
         # TODO: implement
-
         if dout is None:
             dout = torch.ones_like(self.data)
-
         self.grad = dout.clone()
         for node in reversed(self.predecessors()):
             if node.grad_fn is not None:
                 grads = node.grad_fn(node.grad)
-
                 for i, parent in enumerate(node.parents):
                     if parent.grad is None:
                         parent.grad = grads[i].clone()
                     else:
                         parent.grad += grads[i].clone()
-
         # ENDTODO
         ########################################
 
@@ -298,7 +274,6 @@ class Variable:
 
         ########################################
         # TODO: implement
-
         visited = set()
         for node in self.predecessors():
             node_uid, node_label = get_node_info(node, show_data=show_data)
@@ -307,7 +282,6 @@ class Variable:
                 func_uid, func_label = get_func_info(node)
                 dot.node(func_uid, label=func_label, shape='ellipse')
                 dot.edge(node_uid, func_uid)
-
         # ENDTODO
         ########################################
 

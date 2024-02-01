@@ -2,7 +2,7 @@ import functools
 from typing import Any, Optional, Union
 
 import torch
-
+import numpy as np
 from ans.autograd import Variable
 
 
@@ -12,9 +12,11 @@ class Function:
     def apply(cls, *inputs: Union[Variable, Any], **params: Any) -> Variable:
         tensor_args = [i.data if isinstance(i, Variable) else i for i in inputs]
         output_data, cache = cls.forward(*tensor_args, **params)
+
         def grad_fn(dout: torch.Tensor) -> tuple[torch.Tensor, ...]:
             dinputs = cls.backward(dout, cache=cache)
             return tuple(dinputs[i] for i, inp in enumerate(inputs) if isinstance(inp, Variable))
+
         grad_fn.name = f"{cls.__name__}.backward"
         return Variable(
             output_data,
@@ -36,7 +38,7 @@ class Function:
     def __repr__(self):
         return str(self)
 
-    
+
 class Linear(Function):
 
     @staticmethod
@@ -53,7 +55,6 @@ class Linear(Function):
 
         ########################################
         # TODO: implement
-
         output = input.matmul(weight) + bias
         cache = input, weight, bias
 
@@ -147,14 +148,14 @@ class SoftmaxCrossEntropy(Function):
 
         ########################################
         # TODO: implement
-        
-        scores = scores.float() # Causes small errors in testing when this is not here???
+
+        scores = scores.float()  # Causes small errors in testing when this is not here???
 
         # Numerical stability
         max_scores, _ = torch.max(scores, dim=1, keepdim=True)
         scores -= max_scores
         exp_scores = torch.exp(scores)
-        
+
         softmax_probs = exp_scores / torch.sum(exp_scores, dim=1, keepdim=True)
         target_probs = softmax_probs[torch.arange(scores.size(0)), targets]
 
@@ -337,7 +338,7 @@ class Dropout(Function):
             # During evaluation, keep the input unchanged
             output = input
             cache = None
-        
+
         # ENDTODO
         ########################################
 
@@ -395,10 +396,10 @@ class BatchNorm1d(Function):
 
         ########################################
         # TODO: implement
-        
+
         import torch
         from typing import Optional, Tuple
-        
+
         # Ensure double precision for running mean and variance
         if running_mean is not None:
             running_mean = running_mean.to(dtype=torch.float64)
@@ -452,10 +453,9 @@ class BatchNorm1d(Function):
         dbeta = doutput.sum(dim=0)
 
         dx_hat = doutput * gamma
-        dvar = -0.5 * (dx_hat * (input - mean)).sum(dim=0) * (var + eps)**(-1.5)
-        dmean = -dx_hat.sum(dim=0) / torch.sqrt(var + eps) - 2 * dvar * (input - mean).mean(dim=0) / N
+        dvar = -0.5 * (dx_hat * (input - mean)).sum(dim=0) * (var + eps) ** (-1.5)
+        dmean = -dx_hat.sum(dim=0) / torch.sqrt(var + eps) - 2 * dvar * (input - mean).mean(dim=0)
         dinput = dx_hat / torch.sqrt(var + eps) + 2 * dvar * (input - mean) / N + dmean / N
-
 
         # ENDTODO
         ########################################
@@ -496,7 +496,14 @@ class BatchNorm2d(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        N, C, H, W = input.shape
+        input_reshaped = input.permute(0, 2, 3, 1).contiguous().view(-1, C)
+
+        output_reshaped, cache = BatchNorm1d.forward(
+            input_reshaped, gamma, beta, running_mean, running_var, momentum, eps, training
+        )
+
+        output = output_reshaped.view(N, H, W, C).permute(0, 3, 1, 2).contiguous()
 
         # ENDTODO
         ########################################
@@ -516,7 +523,12 @@ class BatchNorm2d(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        N, C, H, W = doutput.shape
+        doutput_reshaped = doutput.permute(0, 2, 3, 1).contiguous().view(-1, C)
+
+        dinput_reshaped, dgamma, dbeta = BatchNorm1d.backward(doutput_reshaped, cache)
+
+        dinput = dinput_reshaped.view(N, H, W, C).permute(0, 3, 1, 2).contiguous()
 
         # ENDTODO
         ########################################
@@ -538,8 +550,8 @@ class Conv2d(Function):
     ) -> tuple[torch.Tensor, tuple]:
         """
         Args:
-            input: shape (num_samples, num_channels, height, width)
-            weight: shape (num_filters, num_channels, kernel_size[0], kernel_size[1])
+            input: shape (num_samples(minibatch), num_channels(in_channels), height, width)
+            weight: shape (num_filters(out_channels), num_channels, kernel_size[0], kernel_size[1])
             bias: shape (num_filters,)
             stride: convolution step size
             padding: how much should the input be padded on each side by zeroes
@@ -552,9 +564,9 @@ class Conv2d(Function):
         """
         ########################################
         # TODO: implement
-
-        raise NotImplementedError
-
+        #output = torch.nn.functional.conv2d(input, weight, bias=torch.tensor(bias), stride=stride, padding=padding, dilation=dilation, groups=groups)        
+        output = torch.nn.functional.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
+        cache = (input, weight, bias, stride, padding, dilation, groups)
         # ENDTODO
         ########################################
 
@@ -564,7 +576,7 @@ class Conv2d(Function):
     def backward(doutput: torch.Tensor, cache=()) -> tuple[torch.Tensor, ...]:
         """
         Args:
-            doutput: gradient w.r.t. output of the forward pass; shape (num_samples, num_filters, output_height, output_width)
+            doutput: gradient w.r.t. output of the forward pass; shape (num_samples(in_channels), num_filters(out_channels), output_height, output_width)
             cache: cache from the forward pass
         Returns:
             tuple of gradients w.r.t. input, weight and bias
@@ -573,12 +585,44 @@ class Conv2d(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        input, weight, bias, stride, padding, dilation, groups = cache
+        batch_size, channels, input_height, input_width = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
+        output_height, output_width = doutput.shape[2], doutput.shape[3]
+        kernel_size_height, kernel_size_width = weight.shape[2], weight.shape[3]
 
+        output_padding_height = input_height - (output_height - 1) * stride + 2 * padding - (
+                kernel_size_height - 1) * dilation - 1
+        output_padding_width = input_width - (output_width - 1) * stride + 2 * padding - (
+                kernel_size_width - 1) * dilation - 1
+
+        transpose_output = torch.nn.functional.conv_transpose2d(doutput, weight, stride=stride, padding=padding, dilation=dilation, groups=groups, output_padding=(output_padding_height, output_padding_width))  # WORKS for all
+
+        num_filters, num_channels, kernel_size, kernel_size = weight.size()
+        num_samples, num_channels, height, width = input.size()
+
+        grad_w = torch.zeros((num_filters, num_channels, kernel_size, kernel_size), dtype=doutput.dtype, device=torch.device('cpu'))   # USE ONLY FOR CPU !!!
+        #grad_w = torch.zeros((num_filters, num_channels, kernel_size, kernel_size), dtype=doutput.dtype, device=torch.device('cuda')) # USE ONLY FOR CUDA !!!
+        
+        for s in range(num_samples):
+            temp_input = input[s, :, :, :].unsqueeze(1)
+            temp_doutput = doutput[s, :, :, :].unsqueeze(1)
+            
+            temp_conv2d = torch.nn.functional.conv2d(temp_input, temp_doutput, stride=dilation, padding=padding, dilation=stride, groups=groups).squeeze()
+            cut_conv2d = torch.permute((temp_conv2d[:, :, :kernel_size, :kernel_size]), (1, 0, 2, 3))
+            grad_w[:, :, :, :] += cut_conv2d
+        
+        grad_b = doutput.sum(dim=(0, 2, 3), keepdim=True).squeeze()  # WORKS for all
+        dinput = transpose_output
+        dweight = grad_w
+        dbias = grad_b
         # ENDTODO
         ########################################
 
         return dinput, dweight, dbias
+
+
+# conv_result = torch.nn.functional.conv2d(transpose_output[n, :, :, :].unsqueeze(0), weight[f].unsqueeze(0)).squeeze()
+# conv_result = conv_result[:grad_w.shape[-2], :grad_w.shape[-1]]
 
 
 class MaxPool2d(Function):
@@ -586,7 +630,6 @@ class MaxPool2d(Function):
     @staticmethod
     def forward(input: torch.Tensor, window_size: int = 2) -> tuple[torch.Tensor, tuple]:
         """
-
         Args:
             input: shape (num_samples, num_channels, height, width)
             window_size: size of pooling window
@@ -598,12 +641,45 @@ class MaxPool2d(Function):
         ########################################
         # TODO: implement
 
-        raise NotImplementedError
+        #import numpy as np
+        batch_size, channels, height, width = input.size()
+        w_trim_amount = (width - window_size) % window_size
+        if w_trim_amount > 0:
+            input = input[:, :, :, :-w_trim_amount]
+        h_trim_amount = (height - window_size) % window_size
+        if h_trim_amount > 0:
+            input = input[:, :, :-h_trim_amount, :]
 
+
+        #
+        #
+        #
+        #
+        #
+        batch_size, channels, height, width = input.size()
+        input_reshaped = input.unfold(2, window_size, window_size).unfold(3, window_size, window_size)
+        input_reshaped = input_reshaped.reshape(batch_size, channels, height // window_size, width // window_size, -1)
+
+        output, _ = input_reshaped.max(dim=-1)
+        input_flat = input.reshape(batch_size, channels, -1).squeeze()
+
+        input_flat = input_flat.double()
+        output = output.double()
+
+        sort_idx = torch.argsort(input_flat.reshape(-1))
+        output_flat = sort_idx[torch.searchsorted(input_flat.reshape(-1), output.reshape(-1), sorter=sort_idx)]
+
+        indices = torch.unravel_index(output_flat.view(output.shape), input_flat.shape)[-1]
+        output = torch.tensor(output)
+        indices = torch.tensor(indices)
+        cache = (input.size(), window_size, indices, w_trim_amount, h_trim_amount)
+        
         # ENDTODO
         ########################################
 
-        return output, cache
+        #return torch.tensor(np.float32(output.cpu())).to('cuda'), cache  # USE ONLY FOR CUDA !!!
+        #return np.float32(output.cpu()), cache                           # USE ONLY FOR CPU !!!
+        return output, cache                                              # USE ONLY FOR TESTS !!!
 
     @staticmethod
     def backward(doutput: torch.Tensor, cache=()) -> tuple[torch.Tensor, ...]:
@@ -617,10 +693,11 @@ class MaxPool2d(Function):
 
         ########################################
         # TODO: implement
+        input_size, window_size, indices, w_trim_amount, h_trim_amount = cache
+        dinput = torch.nn.functional.max_unpool2d(doutput, indices, kernel_size=window_size, stride=window_size, padding=0, output_size=None)
 
-        raise NotImplementedError
+        dinput = torch.nn.functional.pad(dinput, (0, w_trim_amount, 0, h_trim_amount, 0, 0, 0, 0), value=0)
 
         # ENDTODO
         ########################################
-
         return dinput,
